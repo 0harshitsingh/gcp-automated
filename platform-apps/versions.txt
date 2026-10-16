@@ -1,0 +1,2 @@
+argocd argocd argo-cd-10.10.5
+traefik traefik traefik-41.7.1
