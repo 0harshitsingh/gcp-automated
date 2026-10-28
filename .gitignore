@@ -5,3 +5,6 @@ tfplan*
 terraform.tfvars
 *-secret.yaml
 crash.log
+*.tfvars
+*.plan
+.terraform/

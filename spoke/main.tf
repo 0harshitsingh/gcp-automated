@@ -106,6 +106,7 @@ resource "google_container_node_pool" "primary" {
     disk_type       = "pd-standard"
     service_account = google_service_account.gke_nodes.email
     oauth_scopes    = ["https://www.googleapis.com/auth/cloud-platform"]
+    tags            = ["gke-lab-node"]
   }
 
   depends_on = [google_project_iam_member.gke_nodes]
