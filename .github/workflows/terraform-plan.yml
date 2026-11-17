@@ -1,0 +1,50 @@
+name: terraform-plan
+
+on:
+  pull_request:
+    paths: ['**.tf', '.github/workflows/**']
+
+permissions:
+  contents: read
+  id-token: write   # lets GitHub prove its identity to GCP (WIF)
+
+env:
+  TF_VAR_org_id: ${{ vars.ORG_ID }}
+  TF_VAR_billing_account: ${{ vars.BILLING_ACCOUNT }}
+  TF_VAR_host_project_id: ${{ vars.HOST_PROJECT_ID }}
+  TF_VAR_service_project_id: ${{ vars.SERVICE_PROJECT_ID }}
+  TF_VAR_admin_user: ${{ secrets.ADMIN_USER }}
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: bootstrap,  dir: bootstrap,   init: "",                                                                               args: "" }
+          - { name: lab-host,   dir: lab/host,    init: "",                                                                               args: "" }
+          - { name: lab-spoke,  dir: lab/spoke,   init: "",                                                                               args: "" }
+          - { name: np-folders, dir: np/folders,  init: "",                                                                               args: "" }
+          - { name: np-dev,     dir: np/env,      init: "-backend-config=bucket=singh-tf-state -backend-config=prefix=np/dev",            args: "-var env=dev -var link_billing=true" }
+          - { name: np-qa,      dir: np/env,      init: "-backend-config=bucket=singh-tf-state -backend-config=prefix=np/qa",             args: "-var env=qa -var link_billing=false" }
+    name: plan ${{ matrix.name }}
+    defaults:
+      run:
+        working-directory: ${{ matrix.dir }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.WIF_SA }}
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+      - name: Init
+        run: terraform init -input=false ${{ matrix.init }}
+      - name: Plan (read-only, no lock)
+        run: |
+          terraform plan -input=false -lock=false -no-color ${{ matrix.args }} | tee plan.txt
+          echo "### ${{ matrix.name }}" >> "$GITHUB_STEP_SUMMARY"
+          grep -E "No changes|Plan:" plan.txt >> "$GITHUB_STEP_SUMMARY" || true
