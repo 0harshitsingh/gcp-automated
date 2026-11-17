@@ -37,7 +37,7 @@ resource "google_compute_shared_vpc_service_project" "attach" {
   ]
 }
 
-output "host_project_id"  { value = module.host_project.project_id }
+output "host_project_id" { value = module.host_project.project_id }
 output "spoke_project_id" { value = module.spoke_project.project_id }
 
 module "host_project" {

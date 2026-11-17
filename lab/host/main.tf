@@ -70,17 +70,17 @@ resource "google_compute_subnetwork" "gke" {
   project                  = module.project.project_id
   region                   = "us-east4"
   network                  = google_compute_network.vpc.id
-  ip_cidr_range            = "10.20.0.0/24"     # nodes
+  ip_cidr_range            = "10.20.0.0/24" # nodes
   private_ip_google_access = true
 
   secondary_ip_range {
     range_name    = "pods"
-    ip_cidr_range = "10.21.0.0/16"              # pods
+    ip_cidr_range = "10.21.0.0/16" # pods
   }
 
   secondary_ip_range {
     range_name    = "services"
-    ip_cidr_range = "10.22.0.0/20"              # services
+    ip_cidr_range = "10.22.0.0/20" # services
   }
 }
 
@@ -103,9 +103,9 @@ resource "google_compute_subnetwork_iam_member" "gke_users" {
 
 # GKE service agent needs this on the host project
 resource "google_project_iam_member" "gke_host_agent" {
-  project = module.project.project_id
-  role    = "roles/container.hostServiceAgentUser"
-  member  = "serviceAccount:service-${data.google_project.service.number}@container-engine-robot.iam.gserviceaccount.com"
+  project    = module.project.project_id
+  role       = "roles/container.hostServiceAgentUser"
+  member     = "serviceAccount:service-${data.google_project.service.number}@container-engine-robot.iam.gserviceaccount.com"
   depends_on = [module.project]
 }
 
