@@ -5,7 +5,7 @@ provider "google" {
 variable "org_id" {}
 variable "billing_account" {}
 variable "env" {}                          # dev, qa or uat
-variable "link_billing" { default = true } # false = project only, no billing
+variable "link_billing" { default = false } # false = project only, no billing
 
 # Find the folders from Step 1
 data "google_active_folder" "host_np" {
