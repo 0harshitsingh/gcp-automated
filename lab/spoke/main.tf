@@ -11,40 +11,21 @@ resource "google_folder" "spoke" {
   parent       = "organizations/${var.org_id}"
 }
 
-resource "google_project" "service" {
-  name                = "service-prj"
-  project_id          = "service-prj-singh-lab"   # must be globally unique
-  folder_id           = google_folder.spoke.name
-  billing_account     = var.billing_account
-  auto_create_network = false
-}
-
-resource "google_project_service" "compute" {
-  project = google_project.service.project_id
-  service = "compute.googleapis.com"
-}
-
 # Attaches this project to the Shared VPC host
 resource "google_compute_shared_vpc_service_project" "attach" {
   host_project    = var.host_project_id
-  service_project = google_project.service.project_id
-  depends_on      = [google_project_service.compute]
+  service_project = module.project.project_id
+  depends_on      = [module.project]
 }
 
 output "service_project_id" {
-  value = google_project.service.project_id
+  value = module.project.project_id
 }
 
 #must to add for creation of robotsa
-resource "google_project_service" "container" {
-  project    = google_project.service.project_id
-  service    = "container.googleapis.com"
-  depends_on = [google_project_service.compute]
-}
-
 # ---------- Node service account ----------
 resource "google_service_account" "gke_nodes" {
-  project      = google_project.service.project_id
+  project      = module.project.project_id
   account_id   = "gke-nodes"
   display_name = "GKE node SA"
 }
@@ -60,7 +41,7 @@ locals {
 
 resource "google_project_iam_member" "gke_nodes" {
   for_each = toset(local.node_roles)
-  project  = google_project.service.project_id
+  project  = module.project.project_id
   role     = each.key
   member   = "serviceAccount:${google_service_account.gke_nodes.email}"
 }
@@ -68,7 +49,7 @@ resource "google_project_iam_member" "gke_nodes" {
 # ---------- Cluster ----------
 resource "google_container_cluster" "gke" {
   name                = "lab-gke"
-  project             = google_project.service.project_id
+  project             = module.project.project_id
   location            = "us-east4-a"
   deletion_protection = false
 
@@ -89,13 +70,13 @@ resource "google_container_cluster" "gke" {
     master_ipv4_cidr_block  = "172.16.0.0/28"
   }
 
-  depends_on = [google_project_service.container]
+  depends_on = [module.project]
 }
 
 # ---------- Node pool ----------
 resource "google_container_node_pool" "primary" {
   name       = "primary"
-  project    = google_project.service.project_id
+  project    = module.project.project_id
   location   = "us-east4-a"
   cluster    = google_container_cluster.gke.name
   node_count = var.node_count
@@ -115,4 +96,27 @@ resource "google_container_node_pool" "primary" {
 
 variable "node_count" {
   default = 0 # lab is off by default; use -var node_count=2 to turn it on
+}
+
+module "project" {
+  source          = "../../modules/project"
+  name            = "service-prj"
+  project_id      = "service-prj-singh-lab"
+  folder_id       = google_folder.spoke.name
+  billing_account = var.billing_account
+  services        = ["compute.googleapis.com", "container.googleapis.com"]
+}
+
+# Tells Terraform these are the SAME objects at new addresses (prevents destroy/recreate)
+moved {
+  from = google_project.service
+  to   = module.project.google_project.this
+}
+moved {
+  from = google_project_service.compute
+  to   = module.project.google_project_service.this["compute.googleapis.com"]
+}
+moved {
+  from = google_project_service.container
+  to   = module.project.google_project_service.this["container.googleapis.com"]
 }
