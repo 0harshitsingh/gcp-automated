@@ -1,0 +1,33 @@
+name: terraform-check
+
+on:
+  pull_request:
+    paths: ['**.tf', '.github/workflows/**']
+  push:
+    branches: [main]
+    paths: ['**.tf', '.github/workflows/**']
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        dir: [bootstrap, lab/host, lab/spoke, np/folders, np/env, modules/project]
+    defaults:
+      run:
+        working-directory: ${{ matrix.dir }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+      - name: Format check
+        run: terraform fmt -check -diff
+      - name: Init (no backend, no GCP login)
+        run: terraform init -backend=false -input=false
+      - name: Validate
+        run: terraform validate
