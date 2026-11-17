@@ -98,7 +98,7 @@ resource "google_container_node_pool" "primary" {
   project    = google_project.service.project_id
   location   = "us-east4-a"
   cluster    = google_container_cluster.gke.name
-  node_count = 2
+  node_count = var.node_count
 
   node_config {
     machine_type    = "e2-medium"
@@ -112,3 +112,7 @@ resource "google_container_node_pool" "primary" {
   depends_on = [google_project_iam_member.gke_nodes]
 }
 
+
+variable "node_count" {
+  default = 0 # lab is off by default; use -var node_count=2 to turn it on
+}
